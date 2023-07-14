@@ -15,6 +15,7 @@ BLACKLIST = ['example.com', 'blockeddomain.com']
 
 class DNSRequestHandler(socketserver.BaseRequestHandler):
     def handle(self):
+        print("Request Processing")
         # Handle the DNS request
         query = dns.message.from_wire(self.request[0])
         domain = str(query.question[0].name)
