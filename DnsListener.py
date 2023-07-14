@@ -23,7 +23,7 @@ class DNSRequestHandler(socketserver.BaseRequestHandler):
             response = resolver.resolve(domain, query.rdtype)
         
         # Send the DNS response back to the client
-        self.request[1].sendto(response.to_wire(), self.client_address)
+        self.request[1].sendto(response.to_wire(None), self.client_address)
 
 dns_server = socketserver.ThreadingUDPServer(('0.0.0.0', 53), DNSRequestHandler)
 
