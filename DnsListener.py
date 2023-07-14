@@ -12,7 +12,7 @@ LISTEN_PORT = 53  # Port to listen on
 UPSTREAM_DNS = '8.8.8.8'  # Upstream DNS server to forward valid requests
 
 # Blacklisted domains
-BLACKLIST = ['youtube.com.', 'www.youtube.com.', 'youtubekids.com.', 'www.youtubekids.com.']
+BLACKLIST = ['youtube.com.', 'www.youtube.com.', 'youtubekids.com.', 'www.youtubekids.com.', 'm.youtube.com.', 'm.youtubekids.com.']
 
 class DNSRequestHandler(socketserver.BaseRequestHandler):
     def handle(self):
