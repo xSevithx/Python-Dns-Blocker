@@ -16,19 +16,23 @@ BLACKLIST = ['youtube.com.', 'www.youtube.com.', 'youtubekids.com.', 'www.youtub
 
 # Whitelisted IP addresses
 WHITELIST = ['192.168.1.7']
-
+def log_request(domain, ip):
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    log_entry = f"{timestamp} - Domain: {domain}, IP: {ip}\n"
+    with open("dns_log.txt", "a") as log_file:
+        log_file.write(log_entry)
+        
 class DNSRequestHandler(socketserver.BaseRequestHandler):
     def handle(self):
         # Get the client IP address
         client_ip = self.client_address[0]
-
         # Handle the DNS request
         query = dns.message.from_wire(self.request[0])
         domain = str(query.question[0].name)
-
         # Print the domain being requested
         print(datetime.datetime.now(), " : ", client_ip, " : ", domain,)
-
+        # Log the request to a file
+        log_request(domain, client_ip)
         # Create a response message
         response = dns.message.make_response(query)
 
