@@ -20,7 +20,7 @@ class DNSRequestHandler(socketserver.BaseRequestHandler):
         else:
             # Forward the request to an upstream DNS resolver
             resolver = dns.resolver.Resolver()
-            response = resolver.query(domain)
+            response = resolver.resolve(domain, query.rdtype)
         
         # Send the DNS response back to the client
         self.request[1].sendto(response.to_wire(), self.client_address)
