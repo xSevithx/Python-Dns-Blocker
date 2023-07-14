@@ -28,6 +28,8 @@ class DNSRequestHandler(socketserver.BaseRequestHandler):
             response.set_rcode(dns.rcode.NXDOMAIN)
             # Set an empty answer section to indicate "Not found" response
             response.answer = []
+            # Print "BLACKLISTED" for blacklisted domains
+            print("BLACKLISTED")
         else:
             # Forward the request to the upstream DNS server
             response = dns.query.tcp(query, UPSTREAM_DNS)
