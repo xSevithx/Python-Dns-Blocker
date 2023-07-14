@@ -4,7 +4,7 @@ import dns.resolver
 import socketserver
 import threading
 
-blacklist = ['example.com', 'blockeddomain.com']
+blacklist = ['youtube.com', 'youtubekids.com']
 
 class DNSRequestHandler(socketserver.BaseRequestHandler):
     def handle(self):
