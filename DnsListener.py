@@ -27,7 +27,7 @@ class DNSRequestHandler(socketserver.BaseRequestHandler):
         domain = str(query.question[0].name)
 
         # Print the domain being requested
-        print(datetime.datetime.now(), " : ", domain)
+        print(datetime.datetime.now(), " : ", client_ip, " : ", domain,)
 
         # Create a response message
         response = dns.message.make_response(query)
