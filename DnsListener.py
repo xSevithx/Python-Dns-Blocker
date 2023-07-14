@@ -26,9 +26,7 @@ class DNSRequestHandler(socketserver.BaseRequestHandler):
             response.set_rcode(dns.rcode.NXDOMAIN)
         else:
             # Forward the request to the upstream DNS server
-            resolver = dns.resolver.Resolver()
-            resolver.nameservers = [UPSTREAM_DNS]
-            response = resolver.query(domain, query.rdclass, query.rdtype)
+            response = dns.query.tcp(query, UPSTREAM_DNS)
 
         # Send the DNS response back to the client
         self.request[1].sendto(response.to_wire(), self.client_address)
