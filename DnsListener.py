@@ -4,6 +4,7 @@ import dns.rcode
 import dns.resolver
 import socketserver
 import threading
+import datetime
 
 # DNS server settings
 LISTEN_ADDRESS = '0.0.0.0'  # Address to listen on (all network interfaces)
@@ -19,7 +20,7 @@ class DNSRequestHandler(socketserver.BaseRequestHandler):
         query = dns.message.from_wire(self.request[0])
         domain = str(query.question[0].name)
         # Print the domain being requested
-        print("Requested Domain:", domain)
+        print("Requested Domain:", domain, "Timestamp:", datetime.datetime.now())
         # Create a response message
         response = dns.message.make_response(query)
         # Check if the domain is in the blacklist
