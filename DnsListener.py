@@ -20,6 +20,8 @@ class DNSRequestHandler(socketserver.BaseRequestHandler):
         # Handle the DNS request
         query = dns.message.from_wire(self.request[0])
         domain = str(query.question[0].name)
+        # Print the domain being requested
+        print("Requested Domain:", domain)
         # Create a response message
         response = dns.message.make_response(query)
         # Check if the domain is in the blacklist
