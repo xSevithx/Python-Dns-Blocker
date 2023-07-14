@@ -15,8 +15,6 @@ BLACKLIST = ['youtube.com.', 'www.youtube.com.', 'youtubekids.com.', 'www.youtub
 
 class DNSRequestHandler(socketserver.BaseRequestHandler):
     def handle(self):
-        # Print a message for each DNS request
-        print("Request Processing")
         # Handle the DNS request
         query = dns.message.from_wire(self.request[0])
         domain = str(query.question[0].name)
