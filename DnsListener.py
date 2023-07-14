@@ -15,7 +15,7 @@ UPSTREAM_DNS = '8.8.8.8'  # Upstream DNS server to forward valid requests
 BLACKLIST = ['youtube.com.', 'www.youtube.com.', 'youtubekids.com.', 'www.youtubekids.com.', 'm.youtube.com.', 'm.youtubekids.com.']
 
 # Whitelisted IP addresses
-WHITELIST = ['192.168.0.10', '10.0.0.20']
+WHITELIST = ['192.168.1.7']
 
 class DNSRequestHandler(socketserver.BaseRequestHandler):
     def handle(self):
