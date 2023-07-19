@@ -12,7 +12,7 @@ LISTEN_PORT = 53  # Port to listen on
 UPSTREAM_DNS = '8.8.8.8'  # Upstream DNS server to forward valid requests
 
 # Blacklisted domains
-BLACKLIST = ['youtube.com.', 'www.youtube.com.', 'youtubekids.com.', 'www.youtubekids.com.', 'm.youtube.com.', 'm.youtubekids.com.', 'youtubei.googleapis.com.']
+BLACKLIST = ['youtube', 'youtubekids', 'youtubei']
 
 # Whitelisted IP addresses
 WHITELIST = ['192.168.1.7']
@@ -37,7 +37,7 @@ class DNSRequestHandler(socketserver.BaseRequestHandler):
         response = dns.message.make_response(query)
 
         # Check if the domain is in the blacklist
-        if domain in BLACKLIST and client_ip not in WHITELIST:
+        if any(word in domain for word in BLACKLIST) and client_ip not in WHITELIST:
             print("BLACKLISTED")
             # Set the response code to indicate non-existent domain
             response.set_rcode(dns.rcode.NXDOMAIN)
