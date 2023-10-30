@@ -16,39 +16,51 @@ BLACKLIST = ['youtube', 'youtubekids', 'youtubei']
 
 # Whitelisted IP addresses
 WHITELIST = ['192.168.1.7']
+
+# Block period (from 4PM to 8AM next day)
+BLOCK_START_TIME = datetime.time(16, 0)  # 4:00 PM
+BLOCK_END_TIME = datetime.time(8, 0)   # 8:00 AM
+
 def log_request(domain, ip):
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     log_entry = f"{timestamp} - Domain: {domain}, IP: {ip}\n"
     with open("dns_log.txt", "a") as log_file:
         log_file.write(log_entry)
-        
+
+def is_block_period():
+    current_time = datetime.datetime.now().time()
+    return BLOCK_START_TIME <= current_time or current_time < BLOCK_END_TIME
+
 class DNSRequestHandler(socketserver.BaseRequestHandler):
     def handle(self):
         # Get the client IP address
         client_ip = self.client_address[0]
-        # Handle the DNS request
-        query = dns.message.from_wire(self.request[0])
-        domain = str(query.question[0].name)
-        # Print the domain being requested
-        print(datetime.datetime.now(), " : ", client_ip, " : ", domain,)
-        # Log the request to a file
-        log_request(domain, client_ip)
-        # Create a response message
-        response = dns.message.make_response(query)
+        # Handle the DNS request only if it's not within the block period
+        if not is_block_period():
+            query = dns.message.from_wire(self.request[0])
+            domain = str(query.question[0].name)
+            # Print the domain being requested
+            print(datetime.datetime.now(), " : ", client_ip, " : ", domain,)
+            # Log the request to a file
+            log_request(domain, client_ip)
+            # Create a response message
+            response = dns.message.make_response(query)
 
-        # Check if the domain is in the blacklist
-        if any(word in domain for word in BLACKLIST) and client_ip not in WHITELIST:
-            print("BLACKLISTED")
-            # Set the response code to indicate non-existent domain
-            response.set_rcode(dns.rcode.NXDOMAIN)
-            # Set an empty answer section to indicate "Not found" response
-            response.answer = []
+            # Check if the domain is in the blacklist
+            if any(word in domain for word in BLACKLIST) and client_ip not in WHITELIST:
+                print("BLACKLISTED")
+                # Set the response code to indicate non-existent domain
+                response.set_rcode(dns.rcode.NXDOMAIN)
+                # Set an empty answer section to indicate "Not found" response
+                response.answer = []
+            else:
+                # Forward the request to the upstream DNS server
+                response = dns.query.tcp(query, UPSTREAM_DNS)
+
+            # Send the DNS response back to the client
+            self.request[1].sendto(response.to_wire(), self.client_address)
         else:
-            # Forward the request to the upstream DNS server
-            response = dns.query.tcp(query, UPSTREAM_DNS)
-
-        # Send the DNS response back to the client
-        self.request[1].sendto(response.to_wire(), self.client_address)
+            print("DNS requests blocked during the specified period.")
 
 # Create a DNS server instance
 dns_server = socketserver.ThreadingUDPServer((LISTEN_ADDRESS, LISTEN_PORT), DNSRequestHandler)
