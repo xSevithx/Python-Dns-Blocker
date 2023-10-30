@@ -40,17 +40,16 @@ class DNSRequestHandler(socketserver.BaseRequestHandler):
     def handle(self):
         # Get the client IP address
         client_ip = self.client_address[0]
+        query = dns.message.from_wire(self.request[0])
+        domain = str(query.question[0].name)
         # Handle the DNS request only if it's not within the block period
         if not is_block_period(client_ip):
-            query = dns.message.from_wire(self.request[0])
-            domain = str(query.question[0].name)
             # Print the domain being requested
             print(datetime.datetime.now(), " : ", client_ip, " : ", domain,)
             # Log the request to a file
             log_request(domain, client_ip)
             # Create a response message
             response = dns.message.make_response(query)
-
             # Check if the domain is in the blacklist
             if any(word in domain for word in BLACKLIST) and client_ip not in WHITELIST:
                 print("BLACKLISTED")
