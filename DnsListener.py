@@ -15,7 +15,7 @@ UPSTREAM_DNS = '8.8.8.8'  # Upstream DNS server to forward valid requests
 BLACKLIST = ['youtube', 'youtubekids', 'youtubei']
 
 # Whitelisted IP addresses
-WHITELIST = ['192.168.1.2']
+WHITELIST = ['192.168.1.2', '192.168.1.3']
 
 # Block period (from 4PM to 8AM next day)
 BLOCK_START_TIME = datetime.time(13, 0)  # 1:00 PM
