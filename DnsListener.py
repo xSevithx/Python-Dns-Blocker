@@ -65,7 +65,7 @@ class DNSRequestHandler(socketserver.BaseRequestHandler):
             # Send the DNS response back to the client
             self.request[1].sendto(response.to_wire(), self.client_address)
         else:
-            print("DNS requests blocked during the specified period.")
+            print(datetime.datetime.now(), " : ", client_ip, " : ", domain, " Time Block")
 
 # Create a DNS server instance
 dns_server = socketserver.ThreadingUDPServer((LISTEN_ADDRESS, LISTEN_PORT), DNSRequestHandler)
