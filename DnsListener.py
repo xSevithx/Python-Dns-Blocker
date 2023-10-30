@@ -41,7 +41,7 @@ class DNSRequestHandler(socketserver.BaseRequestHandler):
         # Get the client IP address
         client_ip = self.client_address[0]
         # Handle the DNS request only if it's not within the block period
-        if not is_block_period():
+        if not is_block_period(client_ip):
             query = dns.message.from_wire(self.request[0])
             domain = str(query.question[0].name)
             # Print the domain being requested
