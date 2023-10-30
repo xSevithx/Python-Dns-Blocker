@@ -27,9 +27,14 @@ def log_request(domain, ip):
     with open("dns_log.txt", "a") as log_file:
         log_file.write(log_entry)
 
-def is_block_period():
+def is_block_period(client_ip):
     current_time = datetime.datetime.now().time()
+    # Check if the client IP is whitelisted
+    if client_ip in WHITELIST:
+        return False
+    # Check if it's within the block period
     return BLOCK_START_TIME <= current_time or current_time < BLOCK_END_TIME
+
 
 class DNSRequestHandler(socketserver.BaseRequestHandler):
     def handle(self):
