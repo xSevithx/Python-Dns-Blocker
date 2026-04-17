@@ -1,52 +1,65 @@
 # DNS Blocker
 
-A lightweight DNS proxy that blocks requests to blacklisted domains (e.g. YouTube) and supports time-based blocking schedules and IP whitelisting.
+A lightweight DNS proxy that blocks requests to blacklisted domains (e.g. YouTube) and supports independent time windows for full internet shutoff and blacklist enforcement, plus IP whitelisting.
 
 ## Features
 
 - **Domain blacklisting** — blocks DNS resolution for specified domains (returns NXDOMAIN)
-- **Time-based blocking** — only block during configured hours (e.g. 1 PM to 8 AM)
+- **Full shutoff window** — kill all internet for non-whitelisted IPs during set hours (e.g. bedtime)
+- **Blacklist enforcement window** — only enforce the blacklist during certain hours (allow as a reward outside those hours)
 - **IP whitelisting** — exempt specific devices from all blocking
 - **Upstream forwarding** — non-blocked queries are forwarded to an upstream DNS server (default: Google 8.8.8.8)
 - **Logging** — all requests are logged to stdout and `dns_log.txt`
 
 ## Quick Start with Docker
 
+1. Edit `.env` with your settings
+2. Run:
+
 ```bash
 docker compose up -d
 ```
 
-Then point your router's or device's DNS settings to the IP of the machine running this container.
+3. Point your router's or device's DNS to the IP of the machine running this container.
 
 ## Configuration
 
-All settings are controlled via environment variables in `docker-compose.yml`:
+All settings live in the `.env` file:
 
-| Variable             | Default                         | Description                                  |
-|----------------------|---------------------------------|----------------------------------------------|
-| `UPSTREAM_DNS`       | `8.8.8.8`                       | DNS server to forward non-blocked queries to |
-| `BLACKLIST`          | `youtube,youtubekids,youtubei`  | Comma-separated domain keywords to block     |
-| `WHITELIST`          | *(empty)*                       | Comma-separated IPs exempt from blocking     |
-| `BLOCK_START_HOUR`   | `13`                            | Hour (24h) when time-based blocking starts   |
-| `BLOCK_START_MINUTE` | `0`                             | Minute when time-based blocking starts       |
-| `BLOCK_END_HOUR`     | `8`                             | Hour (24h) when time-based blocking ends     |
-| `BLOCK_END_MINUTE`   | `0`                             | Minute when time-based blocking ends         |
+| Variable        | Default                        | Description                                            |
+|-----------------|--------------------------------|--------------------------------------------------------|
+| `UPSTREAM_DNS`  | `8.8.8.8`                      | DNS server to forward non-blocked queries to           |
+| `BLACKLIST`     | `youtube,youtubekids,youtubei` | Comma-separated domain keywords to block               |
+| `WHITELIST`     | *(empty)*                      | Comma-separated IPs exempt from all blocking           |
+| `SHUTOFF_START` | `01:00`                        | When full internet shutoff begins (HH:MM, 24h)        |
+| `SHUTOFF_END`   | `08:00`                        | When full internet shutoff ends                        |
+| `ENFORCE_START` | `08:00`                        | When blacklist enforcement begins                      |
+| `ENFORCE_END`   | `23:00`                        | When blacklist enforcement ends                        |
+
+### Time Window Behavior
+
+```
+midnight                                                      midnight
+  |  SHUTOFF (all blocked)  |        ENFORCE (blacklist active)       | FREE |SHUTOFF
+  0  ·  ·  1:00 · · · · 8:00 · · · · · · · · · · · · · · 23:00 · · 1:00
+```
+
+- **During SHUTOFF** — all DNS is blocked for non-whitelisted IPs (no internet at all)
+- **During ENFORCE** — only blacklisted domains are blocked, everything else works
+- **Outside both** — everything is open, including blacklisted domains (reward time)
+- **Whitelisted IPs** — always have full unrestricted access
+
+Set start and end to the same value to make a window always-on (e.g. `ENFORCE_START=00:00` / `ENFORCE_END=00:00` = blacklist enforced 24/7).
 
 ## Running Without Docker
 
 ```bash
 pip install -r requirements.txt
+# Set env vars or export from .env, then:
 sudo python DnsListener.py
 ```
 
 > Port 53 requires root/admin privileges.
-
-## How It Works
-
-1. The server listens for UDP DNS queries on port 53
-2. If the requesting client IP is whitelisted, the query is always forwarded
-3. If the current time falls within the block window, all queries from non-whitelisted IPs are blocked
-4. Otherwise, queries matching the blacklist return NXDOMAIN; all others are forwarded upstream
 
 ## Important Notes
 

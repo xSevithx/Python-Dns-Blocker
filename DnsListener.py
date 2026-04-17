@@ -1,7 +1,6 @@
 import dns.message
 import dns.query
 import dns.rcode
-import dns.resolver
 import socketserver
 import threading
 import datetime
@@ -26,13 +25,17 @@ WHITELIST = set(
     if entry.strip()
 )
 
-BLOCK_START_HOUR = int(os.environ.get('BLOCK_START_HOUR', '13'))
-BLOCK_START_MINUTE = int(os.environ.get('BLOCK_START_MINUTE', '0'))
-BLOCK_END_HOUR = int(os.environ.get('BLOCK_END_HOUR', '8'))
-BLOCK_END_MINUTE = int(os.environ.get('BLOCK_END_MINUTE', '0'))
 
-BLOCK_START_TIME = datetime.time(BLOCK_START_HOUR, BLOCK_START_MINUTE)
-BLOCK_END_TIME = datetime.time(BLOCK_END_HOUR, BLOCK_END_MINUTE)
+def parse_time(env_var, default):
+    raw = os.environ.get(env_var, default).strip()
+    parts = raw.split(':')
+    return datetime.time(int(parts[0]), int(parts[1]))
+
+
+SHUTOFF_START = parse_time('SHUTOFF_START', '01:00')
+SHUTOFF_END = parse_time('SHUTOFF_END', '08:00')
+ENFORCE_START = parse_time('ENFORCE_START', '08:00')
+ENFORCE_END = parse_time('ENFORCE_END', '23:00')
 
 logging.basicConfig(
     level=logging.INFO,
@@ -45,14 +48,27 @@ logging.basicConfig(
 logger = logging.getLogger('dns-blocker')
 
 
-def is_block_period(client_ip):
+def in_time_range(now, start, end):
+    """Check if `now` falls within [start, end). Handles midnight wrap."""
+    if start == end:
+        return True
+    if start < end:
+        return start <= now < end
+    return now >= start or now < end
+
+
+def is_shutoff(client_ip):
     if client_ip in WHITELIST:
         return False
-    current_time = datetime.datetime.now().time()
-    if BLOCK_START_TIME <= BLOCK_END_TIME:
-        return BLOCK_START_TIME <= current_time < BLOCK_END_TIME
-    # Wraps midnight (e.g. 13:00 -> 08:00)
-    return current_time >= BLOCK_START_TIME or current_time < BLOCK_END_TIME
+    if SHUTOFF_START == SHUTOFF_END:
+        return False
+    return in_time_range(datetime.datetime.now().time(), SHUTOFF_START, SHUTOFF_END)
+
+
+def is_enforcing():
+    if ENFORCE_START == ENFORCE_END:
+        return True
+    return in_time_range(datetime.datetime.now().time(), ENFORCE_START, ENFORCE_END)
 
 
 def is_blacklisted(domain):
@@ -79,22 +95,27 @@ class DNSRequestHandler(socketserver.BaseRequestHandler):
 
         domain = str(query.question[0].name)
 
-        if is_block_period(client_ip):
-            logger.info(f"TIME-BLOCK  {client_ip}  {domain}")
+        # Priority 1: full shutoff (kills all internet)
+        if is_shutoff(client_ip):
+            logger.info(f"SHUTOFF     {client_ip}  {domain}")
             response = make_blocked_response(query)
             self.request[1].sendto(response.to_wire(), self.client_address)
             return
 
-        if is_blacklisted(domain) and client_ip not in WHITELIST:
-            logger.info(f"BLACKLISTED {client_ip}  {domain}")
+        # Priority 2: blacklist enforcement (only during enforce window)
+        if is_enforcing() and is_blacklisted(domain) and client_ip not in WHITELIST:
+            logger.info(f"BLOCKED     {client_ip}  {domain}")
             response = make_blocked_response(query)
-        else:
-            logger.info(f"FORWARD     {client_ip}  {domain}")
-            try:
-                response = dns.query.udp(query, UPSTREAM_DNS, timeout=5)
-            except Exception as e:
-                logger.error(f"Upstream DNS error for {domain}: {e}")
-                response = make_blocked_response(query)
+            self.request[1].sendto(response.to_wire(), self.client_address)
+            return
+
+        # Otherwise: forward upstream
+        logger.info(f"FORWARD     {client_ip}  {domain}")
+        try:
+            response = dns.query.udp(query, UPSTREAM_DNS, timeout=5)
+        except Exception as e:
+            logger.error(f"Upstream DNS error for {domain}: {e}")
+            response = make_blocked_response(query)
 
         self.request[1].sendto(response.to_wire(), self.client_address)
 
@@ -108,7 +129,14 @@ def main():
     logger.info(f"Upstream DNS: {UPSTREAM_DNS}")
     logger.info(f"Blacklist: {sorted(BLACKLIST)}")
     logger.info(f"Whitelist: {sorted(WHITELIST) if WHITELIST else '(none)'}")
-    logger.info(f"Block window: {BLOCK_START_TIME} - {BLOCK_END_TIME}")
+    if SHUTOFF_START == SHUTOFF_END:
+        logger.info("Shutoff window: DISABLED")
+    else:
+        logger.info(f"Shutoff window: {SHUTOFF_START} - {SHUTOFF_END}")
+    if ENFORCE_START == ENFORCE_END:
+        logger.info("Enforce window: ALWAYS (24/7)")
+    else:
+        logger.info(f"Enforce window: {ENFORCE_START} - {ENFORCE_END}")
 
     shutdown_event = threading.Event()
 
