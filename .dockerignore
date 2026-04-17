@@ -1,0 +1,7 @@
+.git
+__pycache__
+*.pyc
+dns_log.txt
+DHCP-Server.py
+Transparent-Proxy.py
+iptables
